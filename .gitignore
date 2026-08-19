@@ -1,0 +1,21 @@
+# Build output
+build/
+*.o
+*.so
+
+# TensorRT engines
+*.engine
+*.plan
+
+# Models
+*.onnx
+*.pt
+
+# Measurement output
+*.csv
+logs/
+
+# Editor
+.vscode/
+.cache/
+compile_commands.json
