@@ -11,3 +11,12 @@
 ## Aug 20
 - Wrote Stat class: 512-slot ring buffer, percentiles
 - Tested wrap behavior, p50 of 600 samples = 345 as predicted
+
+## Aug 23
+- Wrote CPU timer
+- Tested CPU timer
+
+## Aug 25
+- Wrote GPU Timer class
+- Tested GPU timer
+- BUG - freed the buffer before use, launched failed silently
