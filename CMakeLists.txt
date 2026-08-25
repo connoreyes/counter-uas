@@ -25,3 +25,6 @@ add_executable(smoke src/app/smoke.cu)
 add_executable(test_stat src/app/test_stat.cpp)
 
 target_include_directories(test_stat PRIVATE include)
+
+add_executable(test_timer src/app/test_timer.cpp)
+target_include_directories(test_timer PRIVATE include)
