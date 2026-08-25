@@ -28,3 +28,6 @@ target_include_directories(test_stat PRIVATE include)
 
 add_executable(test_timer src/app/test_timer.cpp)
 target_include_directories(test_timer PRIVATE include)
+
+add_executable(bench_timing src/app/bench_timing.cu)
+target_include_directories(bench_timing PRIVATE include)
