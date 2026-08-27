@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.18)
 
 # Project name, plus the languages used.
 project(counter_uas LANGUAGES CXX CUDA)
+find_package(OpenCV REQUIRED)
 
 # C++17, as specified in the project design
 set(CMAKE_CXX_STANDARD 17)
@@ -31,3 +32,7 @@ target_include_directories(test_timer PRIVATE include)
 
 add_executable(bench_timing src/app/bench_timing.cu)
 target_include_directories(bench_timing PRIVATE include)
+
+add_executable(test_capture src/app/test_capture.cpp)
+target_include_directories(test_capture PRIVATE include ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(test_capture PRIVATE ${OpenCV_LIBS})
