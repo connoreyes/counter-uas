@@ -5,6 +5,12 @@ cmake_minimum_required(VERSION 3.18)
 project(counter_uas LANGUAGES CXX CUDA)
 find_package(OpenCV REQUIRED)
 
+find_package(CUDAToolkit REQUIRED)
+
+find_library(NVINFER nvinfer)
+find_library(NVINFER_PLUGIN nvinfer_plugin)
+
+
 # C++17, as specified in the project design
 set(CMAKE_CXX_STANDARD 17)
 # REQUIRED means fail loudly rather than silently
@@ -36,3 +42,7 @@ target_include_directories(bench_timing PRIVATE include)
 add_executable(test_capture src/app/test_capture.cpp)
 target_include_directories(test_capture PRIVATE include ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(test_capture PRIVATE ${OpenCV_LIBS})
+
+add_executable(test_engine src/infer/test_engine.cpp)
+target_include_directories(test_engine PRIVATE include ${CUDAToolkit_INCLUDE_DIRS})
+target_link_libraries(test_engine PRIVATE ${NVINFER} ${NVINFER_PLUGIN} CUDA::cudart)

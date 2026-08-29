@@ -32,3 +32,17 @@
   Baseline cost the fused kernel should eliminate.
 - Expect this number to DROP when inference is added — frames will
   already be queued. Not an improvement, just a regime change.
+- Exported yolov8n to ONNX, opset 12, 640x640. Output shape (1, 84, 8400):
+  84 = 4 box coords + 80 COCO class scores. Layout is [84][8400], transposed
+  from the obvious ordering — matters for postprocess indexing.
+- Built FP16 TensorRT engine with trtexec.
+- Baseline: GPU compute 4.39ms mean, throughput 227 qps.
+- H2D 0.288ms + D2H 0.226ms per frame — trtexec copies because it's generic.
+  Zero-copy design should eliminate ~0.5ms/frame.
+- trtexec warned GPU compute unstable, CoV 3.4%. Locked clocks with
+  jetson_clocks, mode MAXN_SUPER (2). Doesn't persist across reboot.
+
+## Aug 28
+- g++ doesn't get CUDA include paths automatically like nvcc does.
+  Needed find_package(CUDAToolkit) + ${CUDAToolkit_INCLUDE_DIRS} for
+  any .cpp that includes TensorRT headers.
