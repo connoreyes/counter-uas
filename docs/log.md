@@ -46,3 +46,13 @@
 - g++ doesn't get CUDA include paths automatically like nvcc does.
   Needed find_package(CUDAToolkit) + ${CUDAToolkit_INCLUDE_DIRS} for
   any .cpp that includes TensorRT headers.
+
+## Aug 20
+- TensorRT engine loads from C++. Tensors confirmed:
+  images (input) 1x3x640x640, output0 (output) 1x84x8400 — matches ONNX export.
+- TRT 10 uses named tensors (getIOTensorName/setTensorAddress), not
+  the integer binding indices from TRT 8 tutorials.
+- Destruction order matters: context, engine, runtime. Uses delete, not destroy().
+- Dims.d[] is int64_t — needs %ld in printf, not %d.
+- "engine plan file across different models of devices" warning on Jetson
+  is spurious when engine was built locally. Ignore.
