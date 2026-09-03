@@ -2,6 +2,7 @@
 #include <NvInfer.h>
 #include <vector>
 #include <fstream>
+#include <cuda_runtime.h>
 
 /*
 Purpose: TensorRT needs a way to tell us when an error occurs
@@ -78,7 +79,15 @@ int main(){
    // how many tensors do we have, yolov8n is 2
     int n = engine -> getNbIOTensors();
 
+    // vector for input meory
+    std::vector<void*> buffers;
+
+
     for (int i = 0; i < n; ++i){
+
+        // nullptr for cudamalloc
+        void* ptr = nullptr;
+        size_t count = 1;
         // for (i) we get ack a string like "images" or "output0"
         const char* name  = engine ->getIOTensorName(i);
         // what shape is it, returns Dims struct with two fields:
@@ -95,9 +104,22 @@ int main(){
 
         //prints each dimension, unkown ammount so we loop nbDims times
         for (int d = 0; d < shape.nbDims; ++d){
+            // multiply dims
+            count *= shape.d[d];
             printf("%ld  ", shape.d[d]);
         }
+        // float 32
+        size_t bytes = count * 4;
+
+        cudaMalloc(&ptr, bytes);
+        bool ok = context -> setTensorAddress(name, ptr);
+        buffers.push_back(ptr);
+
         printf("\n");
+        printf("count=%zu bytes=%zu bind=%s\n", count, bytes, ok ? "ok" : "FAILED");
+    }
+    for (void* p: buffers){
+        cudaFree(p);
     }
 
 
