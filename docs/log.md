@@ -56,3 +56,11 @@
 - Dims.d[] is int64_t — needs %ld in printf, not %d.
 - "engine plan file across different models of devices" warning on Jetson
   is spurious when engine was built locally. Ignore.
+
+## Sep 3
+- allocate and bind tensortRt input/output buffers
+-  images (input)1  3  640  640  
+   count=1228800 bytes=4915200 bind=ok
+   output0 (output)1  84  8400  
+   count=705600 bytes=2822400 bind=ok
+- I asked the engine what tensors it needs and what shape each one is. From the shapes I computed how many elements and therefore how many bytes. I reserved that much GPU memory for each, then told the execution context the address of each tensor by name. Allocated once at startup, reused every frame, so nothing allocates in the hot path.

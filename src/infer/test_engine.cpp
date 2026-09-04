@@ -82,9 +82,13 @@ int main(){
     // vector for input meory
     std::vector<void*> buffers;
 
+    void*  d_input = nullptr;
+    void*  d_output = nullptr;
+    size_t input_bytes = 0;
+    size_t output_count = 0;
+
 
     for (int i = 0; i < n; ++i){
-
         // nullptr for cudamalloc
         void* ptr = nullptr;
         size_t count = 1;
@@ -110,20 +114,59 @@ int main(){
         }
         // float 32
         size_t bytes = count * 4;
-
+        
         cudaMalloc(&ptr, bytes);
+        // tracking variables, since they die after for loop
+        if (mode == nvinfer1::TensorIOMode::kINPUT) {
+            d_input = ptr;
+            input_bytes = bytes;
+        } else {
+            d_output = ptr;
+            output_count = count;
+        }
         bool ok = context -> setTensorAddress(name, ptr);
         buffers.push_back(ptr);
 
         printf("\n");
         printf("count=%zu bytes=%zu bind=%s\n", count, bytes, ok ? "ok" : "FAILED");
     }
-    for (void* p: buffers){
-        cudaFree(p);
+
+
+    // create a stream
+    cudaStream_t stream;
+    cudaStreamCreate(&stream);
+    // set mem to 0
+    cudaMemset(d_input, 0, input_bytes);
+    // host buffer for output
+    std::vector<float> h_output(output_count);
+
+    // run inference
+    bool ran = context -> enqueueV3(stream);
+    if (!ran){
+        printf("enqueueV3 failed\n");
+    }
+    // Arguments: destination, source, size, direction, stream
+    // must use .data() since its a vector, we extract the raw pointer from it
+    // we do output_cout * 4 since we transform the elements into bytes, 1 element = 4 bytes
+    cudaMemcpyAsync(h_output.data(), d_output, output_count * 4, cudaMemcpyDeviceToHost, stream);
+
+    cudaStreamSynchronize(stream);
+
+    for ( int i = 0; i < 10; ++i){
+        printf("%.4f ", h_output[i]);
     }
 
 
+
+
+
+
+
+
     // clean it all up at the end
+    for (void* p: buffers){
+        cudaFree(p);
+    }
     delete context;
     delete engine;
     delete runtime;
