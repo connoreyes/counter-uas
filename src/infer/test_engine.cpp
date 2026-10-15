@@ -3,6 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <cuda_runtime.h>
+#include <opencv2/opencv.hpp>
 
 /*
 Purpose: TensorRT needs a way to tell us when an error occurs
@@ -18,6 +19,30 @@ class Logger : public nvinfer1 ::ILogger{
 };
 
 Logger gLogger;
+
+/*
+Purpose: The og image is a 640x480 dimension, so we need to scale
+both axes by the same factor that is 80, since 80+80=160+480=640, resulting in
+640x640 image.
+*/
+cv::Mat letterbox(const cv::Mat& src, int out_w, int out_h, float& scale, int& pad_x, int& pad_y){
+    scale = std::min(out_w / (float)src.cols, out_h / (float)src.rows);
+    int new_w = (int)(src.cols * scale);
+    int new_h = (int)(src.rows * scale);
+    
+    cv::Mat resized;
+    cv::resize(src, resized, cv::Size(new_w, new_h));
+
+    cv::Mat canvas(out_h, out_w, CV_8UC3, cv::Scalar(114,114,114));
+
+    pad_x = (out_w - new_w) / 2;
+    pad_y = (out_h - new_h) / 2;
+
+    resized.copyTo(canvas(cv::Rect(pad_x, pad_y, new_w, new_h)));
+
+    return canvas;
+
+}
 
 
 int main(){
@@ -130,6 +155,34 @@ int main(){
         printf("\n");
         printf("count=%zu bytes=%zu bind=%s\n", count, bytes, ok ? "ok" : "FAILED");
     }
+    
+    // we grab a frame here
+    // open the camera, cap(0)
+    cv::VideoCapture cap(0);
+    if (!cap.isOpened()){
+        printf("failed to open camera\n");
+        return 1;
+    }
+    // proper dimensions
+    cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+    cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
+    cap.set(cv::CAP_PROP_FPS, 30);
+
+    cv::Mat frame;
+    cap >> frame;
+    if (frame.empty()){
+        printf("empty frame\n");
+        return 1;
+    }
+    printf("frame: %dx%d\n", frame.cols, frame.rows);
+
+    float scale;
+    int pad_x, pad_y;
+    cv:: Mat canvas = letterbox(frame, 640, 640, scale, pad_x, pad_y);
+    printf("scale=%.3f pad_x=%d pad_y=%d canvas=%dx%d",
+    scale, pad_x, pad_y, canvas.cols, canvas.rows);
+    cv:imwrite ("letterbox.png", canvas);
+
 
 
     // create a stream
@@ -162,7 +215,7 @@ int main(){
 
 
 
-
+    cudaStreamDestroy(stream);
     // clean it all up at the end
     for (void* p: buffers){
         cudaFree(p);

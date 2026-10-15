@@ -44,5 +44,5 @@ target_include_directories(test_capture PRIVATE include ${OpenCV_INCLUDE_DIRS})
 target_link_libraries(test_capture PRIVATE ${OpenCV_LIBS})
 
 add_executable(test_engine src/infer/test_engine.cpp)
-target_include_directories(test_engine PRIVATE include ${CUDAToolkit_INCLUDE_DIRS})
-target_link_libraries(test_engine PRIVATE ${NVINFER} ${NVINFER_PLUGIN} CUDA::cudart)
+target_include_directories(test_engine PRIVATE include ${CUDAToolkit_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(test_engine PRIVATE ${NVINFER} ${NVINFER_PLUGIN} CUDA::cudart ${OpenCV_LIBS})
