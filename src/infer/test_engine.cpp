@@ -4,6 +4,7 @@
 #include <fstream>
 #include <cuda_runtime.h>
 #include <opencv2/opencv.hpp>
+#include <timer.hpp>
 
 /*
 Purpose: TensorRT needs a way to tell us when an error occurs
@@ -21,9 +22,14 @@ class Logger : public nvinfer1 ::ILogger{
 Logger gLogger;
 
 /*
-Purpose: The og image is a 640x480 dimension, so we need to scale
-both axes by the same factor that is 80, since 80+80=160+480=640, resulting in
-640x640 image.
+Model needs 640x640, camera gives 640x480. Scaling both axes to fit
+would distort the image, so instead we scale by ONE factor (the min
+of the two ratios) and pad the leftover with gray 114 — the value
+ultralytics uses in training.
+
+Returns scale/pad_x/pad_y by reference because boxes come back in
+letterboxed coords and must be mapped back:
+    original = (box - pad) / scale
 */
 cv::Mat letterbox(const cv::Mat& src, int out_w, int out_h, float& scale, int& pad_x, int& pad_y){
     scale = std::min(out_w / (float)src.cols, out_h / (float)src.rows);
@@ -183,13 +189,32 @@ int main(){
     scale, pad_x, pad_y, canvas.cols, canvas.rows);
     cv:imwrite ("letterbox.png", canvas);
 
+    // use normal timer since runs on CPU
+    Timer t;
+    t.start();
+    // BGR -> RGB, uint8->float, normalize, and HWC->CHW
+    cv::Mat blob = cv::dnn::blobFromImage(
+        canvas, // the letterbox 640x640
+        1.0/255.0, // scale factor normalized to 0-1
+        cv::Size(640,640), // size
+        cv::Scalar(), // mean subtraction
+        true, // swapRB - BGR to RGB
+        false // crop
+    );
+    double prep_ms = t.stop();
+    printf("opencv preprocess: %.3f ms\n", prep_ms);
+    
+
 
 
     // create a stream
     cudaStream_t stream;
     cudaStreamCreate(&stream);
-    // set mem to 0
-    cudaMemset(d_input, 0, input_bytes);
+
+    // copy to the gpu replacing cudaMemset
+    // note: blob.ptr<float>() give the raw float pointer out of the Mat
+    cudaMemcpy(d_input, blob.ptr<float>(), input_bytes, cudaMemcpyHostToDevice);
+    
     // host buffer for output
     std::vector<float> h_output(output_count);
 
