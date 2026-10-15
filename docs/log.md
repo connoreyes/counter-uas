@@ -63,4 +63,13 @@
    count=1228800 bytes=4915200 bind=ok
    output0 (output)1  84  8400  
    count=705600 bytes=2822400 bind=ok
-- I asked the engine what tensors it needs and what shape each one is. From the shapes I computed how many elements and therefore how many bytes. I reserved that much GPU memory for each, then told the execution context the address of each tensor by name. Allocated once at startup, reused every frame, so nothing allocates in the hot path.
+- I asked the engine what tensors it needs and what shape each one is. 
+From the shapes I computed how many elements and therefore how many bytes. 
+I reserved that much GPU memory for each, then told the execution context the address of each tensor by name. 
+Allocated once at startup, reused every frame, so nothing allocates in the hot path.
+- Added the execution inference
+- Inference running from C++. enqueueV3 + cudaMemcpyAsync + stream sync.
+- Fed zeroed input; first 10 outputs are ascending ~6-68, consistent with
+  center-x coords of the anchor grid. Confirms [84][8400] attribute-major layout.
+- TRT 10: enqueueV3 takes only a stream — addresses come from setTensorAddress,
+  not a pointer array like enqueueV2.

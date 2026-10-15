@@ -5,6 +5,7 @@
 #include <cuda_runtime.h>
 #include <opencv2/opencv.hpp>
 #include <timer.hpp>
+#include <stat.hpp>
 
 /*
 Purpose: TensorRT needs a way to tell us when an error occurs
@@ -185,12 +186,31 @@ int main(){
     float scale;
     int pad_x, pad_y;
     cv:: Mat canvas = letterbox(frame, 640, 640, scale, pad_x, pad_y);
-    printf("scale=%.3f pad_x=%d pad_y=%d canvas=%dx%d",
-    scale, pad_x, pad_y, canvas.cols, canvas.rows);
-    cv:imwrite ("letterbox.png", canvas);
+    printf("scale=%.3f pad_x=%d pad_y=%d canvas=%dx%d\n",
+            scale, pad_x, pad_y, canvas.cols, canvas.rows);
+    cv::imwrite ("letterbox.png", canvas);
+
+    // get baseline p50, p95, p99
+    Stat lb_stat, blob_stat;
+    Timer t;
+    for(int i = 0; i < 100; ++i){
+        t.start();
+        cv::Mat c = letterbox(frame, 640, 640, scale, pad_x, pad_y);
+        lb_stat.add(t.stop());
+
+        t.start();
+        cv::Mat b = cv::dnn::blobFromImage(c, 1.0/255.0, cv::Size(640,640),
+                                           cv::Scalar(), true, false);
+        blob_stat.add(t.stop());
+    }
+
+     printf("letterbox  p50=%.3f p95=%.3f p99=%.3f ms\n",
+            lb_stat.percentile(0.50), lb_stat.percentile(0.95), lb_stat.percentile(0.99));
+    printf("blob       p50=%.3f p95=%.3f p99=%.3f ms\n",
+           blob_stat.percentile(0.50), blob_stat.percentile(0.95), blob_stat.percentile(0.99));
+    
 
     // use normal timer since runs on CPU
-    Timer t;
     t.start();
     // BGR -> RGB, uint8->float, normalize, and HWC->CHW
     cv::Mat blob = cv::dnn::blobFromImage(
